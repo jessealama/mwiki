@@ -18,5 +18,5 @@ make -f Makefile.smallinstall $targets \
     MIZBIN=$mizbin \
     XSL4MIZ=$xsl4miz \
     NUM_ARTICLES=$num_articles \
-    PUBLIC_MWIKI_USER=www-data \
+    PUBLIC_MWIKI_USER=mwiki \
     WIKIHOST="192.168.0.12";
