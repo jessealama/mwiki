@@ -9,7 +9,7 @@ use File::Copy qw / copy move /;
 use File::Path qw / remove_tree /;
 use XML::LibXML;
 use Fatal qw / open /;
-use List::MoreUtils qw / all /;
+use List::MoreUtils qw / all first_index /;
 
 ######################################################################
 ### Process the command line
@@ -37,6 +37,15 @@ my $mizfiles = defined $ARGV{'--mizfiles'} ? $ARGV{'--mizfiles'}
 # Sanity check
 unless (defined $mizfiles) {
   die 'Error: The --mizfiles option was not used, so we looked for MIZFILES in he current environment;\nbut that is likewise unset, so we cannot process any mizar texts';
+}
+
+# mml.lar exists under $mizfiles
+my $mml_lar_path = catfile ($mizfiles, 'mml.lar');
+unless (-e $mml_lar_path) {
+  die "The file mml.lar doesn't exist under $mizfiles!";
+}
+unless (-r $mml_lar_path) {
+  die "The file mml.lar under $mizfiles is not readable!";
 }
 
 ### --result-dir
@@ -100,23 +109,42 @@ foreach my $stylesheet (@stylesheets) {
   }
 }
 
-### ARTICLE
+### ARTICLES
 
-# First, extract a value of the single required ARTICLE
-# argument.
-my $article_name = $ARGV{'<ARTICLE>'};
-unless (defined $article_name) { # weird: my typo or bug in Getopt::Euclid
-  die 'Error: The mandatory ARTICLE argument was somehow omitted!';
+# First, extract a value of the required ARTICLES argument.
+my @article_names = @{$ARGV{'<ARTICLES>'}};
+
+# DEBUG
+print "articles: @article_names\n";
+
+sub strip_dot_miz {
+  my $str = shift;
+  my $maybe_cut = undef;
+  if ($str =~ /\.miz$/) {
+    $maybe_cut = substr $str, 0, $str - 4;
+  } else {
+    $maybe_cut = $str;
+  }
+  # DEBUG
+  print "maybe cut is $maybe_cut\n";
+  return $maybe_cut;
 }
 
 # Strip the final ".miz", if there is one
-my $article_name_len = length $article_name;
-if ($article_name =~ /\.miz$/) {
-  $article_name = substr $article_name, 0, $article_name_len - 4;
+@article_names = map { s/\.miz$//; $_ } @article_names;
+
+# DEBUG
+print "stripped articles: @article_names\n";
+
+# ensure short names
+my $failing_index = first_index { !/[A-Za-z0-9_]{1,8}/ } @article_names;
+if ($failing_index >= 0) {
+  my $bad_name = $article_names[$failing_index];
+  die "Article names must be at most 8 characters long, all alphanumeric (or '_'); it may end in '.miz', and if it does, the extension is not counted in the limit of 8 characters.  You supplied '$bad_name'.";
 }
 
 if ($be_verbose) {
-  print "Working with article '$article_name'\n";
+  print "Working with articles @article_names\n";
 }
 
 ### --article-source-dir
@@ -146,22 +174,24 @@ unless (-r $article_source_dir) {
   die "Error: The given article source directory\n\n$article_source_dir\n\nis not readable!";
 }
 
-# Some common extensions we'll be using, and their paths
-my $article_miz = $article_name . '.miz';
-my $article_err = $article_name . '.err'; # for error checking with the mizar tools
-my $article_tmp = $article_name . '.$-$';
-my $article_evl = $article_name . '.evl';
-my $article_miz_path = catfile ($article_source_dir, $article_miz);
-my $article_err_path = catfile ($article_source_dir, $article_err);
-my $article_tmp_path = catfile ($article_source_dir, $article_tmp);
-my $article_evl_path = catfile ($article_source_dir, $article_evl);
+foreach my $article_name (@article_names) {
+  # Some common extensions we'll be using, and their paths
+  my $article_miz = $article_name . '.miz';
+  my $article_err = $article_name . '.err'; # for error checking with the mizar tools
+  my $article_tmp = $article_name . '.$-$';
+  my $article_evl = $article_name . '.evl';
+  my $article_miz_path = catfile ($article_source_dir, $article_miz);
+  my $article_err_path = catfile ($article_source_dir, $article_err);
+  my $article_tmp_path = catfile ($article_source_dir, $article_tmp);
+  my $article_evl_path = catfile ($article_source_dir, $article_evl);
 
-# More sanity checks: the mizar file exists and is readable
-unless (-e $article_miz_path) {
-  die "Error: No file named\n\n  $article_miz\n\nunder the source directory\n\n  $article_source_dir";
-}
-unless (-r $article_miz_path) {
-  die "Error: The file\n\n  $article_miz\n\under the source directory\n\n  $article_source_dir\n\nis not readable";
+  # More sanity checks: the mizar file exists and is readable
+  unless (-e $article_miz_path) {
+    die "Error: No file named\n\n  $article_miz\n\nunder the source directory\n\n  $article_source_dir";
+  }
+  unless (-r $article_miz_path) {
+    die "Error: The file\n\n  $article_miz\n\under the source directory\n\n  $article_source_dir\n\nis not readable";
+  }
 }
 
 ### --no-cleanup
@@ -242,20 +272,24 @@ if ($be_verbose) {
   print "Setting the work directory to $workdir\n";
 }
 
-# Now copy the specified mizar article to the work directory
-my $article_in_workdir = catfile ($workdir, $article_miz);
-copy ($article_miz_path, $article_in_workdir)
-  or die "Error: Unable to copy article ($article_miz) to work directory ($article_in_workdir):\n\n$!";
+# Now copy the specified mizar articles to the work directory
+foreach my $article_name (@article_names) {
+  my $article_miz = $article_name . '.miz';
+  my $article_miz_path = catfile ($article_source_dir, $article_miz);
+  my $article_in_workdir = catfile ($workdir, $article_miz);
+  copy ($article_miz_path, $article_in_workdir)
+    or die "Error: Unable to copy article ($article_miz) to work directory ($article_in_workdir):\n\n$!";
+}
 
 ### 2. Prepare the result directory
 
 ## But first check whether it already exists.  If it does, stop; we
 ## don't want to potentially overwrite anything.
-my $local_db_in_workdir = catdir ($workdir, $article_name);
-my $local_db_in_resultdir = catdir ($result_dir, $article_name);
+my $local_db_in_workdir = catdir ($workdir, 'items');
+my $local_db_in_resultdir = catdir ($result_dir, 'items');
 
 if (-x $local_db_in_resultdir) {
-  die "Error: there is already a directory called '$article_name' in the result directory ($result_dir); refusing to overwrite its contents";
+  die "Error: there is already a directory called 'items' in the result directory ($result_dir); refusing to overwrite its contents";
 }
 
 if ($be_verbose) {
@@ -275,7 +309,7 @@ foreach my $local_db_in_workdir_subdir (@local_db_subdirs) {
 }
 
 ######################################################################
-### Prepare article for itemization:
+### Prepare articles for itemization:
 ###
 ### 1. Run the accomodator (needed for JA1)
 ###
@@ -289,121 +323,163 @@ foreach my $local_db_in_workdir_subdir (@local_db_subdirs) {
 ### 5. Load the .idx file
 ######################################################################
 
-### 1. Run the accomodator
-chdir $workdir;
-system ("accom -q -s -l $article_miz > /dev/null 2> /dev/null") == 0
-  or die "Error: Something went wrong when calling the accomodator on $article_name: the error was\n\n$!";
-if (-s $article_err) {
-  die "Error: although the accomodator returned successfully, it nonetheless generated a non-empty error file";
+sub accom {
+  my $article_name = shift;
+  ### 1. Run the accomodator
+  chdir $workdir;
+  system ("accom -q -s -l $article_miz > /dev/null 2> /dev/null") == 0
+    or die "Error: Something went wrong when calling the accomodator on $article_name: the error was\n\n$!";
+  if (-s $article_err) {
+    die "Error: although the accomodator returned successfully, it nonetheless generated a non-empty error file";
+  }
 }
 
+sub jaone {
+  my $article_name = shift;
 
-### 2. Run JA1, edtfile, overwrite the non-JA1'd .miz, and load it
+  # JA1
+  system ("JA1 -q -s -l $article_miz > /dev/null 2> /dev/null") == 0
+    or die "Error: Something went wrong when calling JA1 on $article_name: the error was\n\n$!";
+  if (-s $article_err) {
+    die "Error: although the JA1 tool returned successfully, it nonetheless generated a non-empty error file";
+  }
 
-# JA1
-system ("JA1 -q -s -l $article_miz > /dev/null 2> /dev/null") == 0
-  or die "Error: Something went wrong when calling JA1 on $article_name: the error was\n\n$!";
-if (-s $article_err) {
-  die "Error: although the JA1 tool returned successfully, it nonetheless generated a non-empty error file";
+  # edtfile
+  system ("edtfile $article_name > /dev/null 2> /dev/null") == 0
+    or die "Error: Something went wrong during the call to edtfile on $article_name:\n\n  $!";
+  if (-s $article_err) {
+    die "Error: although the edtfile tool returned successfully, it nonetheless generated a non-empty error file";
+  }
+
+  # sanity check
+  unless (-e $article_tmp) {
+    die "Error: the edtfile tool did not generate the expected file '$article_tmp'";
+  }
+  unless (-r $article_tmp) {
+    die "Error: the file generated by the edtfile tool, '$article_tmp', is not readable";
+  }
+
+  # rename
+  move ($article_tmp, $article_miz) == 1
+    or die "Error: unable to rename the temporary file\n\n  $article_tmp\n\nto\n\n  $article_miz\n\nin the work directory\n\n  $workdir .\n\nThe error was\n\n  $!";
 }
 
-# edtfile
-system ("edtfile $article_name > /dev/null 2> /dev/null") == 0
-  or die "Error: Something went wrong during the call to edtfile on $article_name:\n\n  $!";
-if (-s $article_err) {
-  die "Error: although the edtfile tool returned successfully, it nonetheless generated a non-empty error file";
+sub dellink {
+  my $article_name = shift;
+
+  system ("dellink -q -s -l $article_miz > /dev/null 2> /dev/null") == 0
+    or die "Error: Something went wrong when calling dellink on $article_name: the error was\n\n$!";
+  if (-s $article_err) {
+    die "Error: although the dellink tool returned successfully, it nonetheless generated a non-empty error file";
+  }
+
+  # edtfile
+  system ("edtfile $article_name > /dev/null 2> /dev/null") == 0
+    or die "Error: Something went wrong during the call to edtfile on $article_name:\n\n  $!";
+  if (-s $article_err) {
+    die "Error: although the edtfile tool returned successfully, it nonetheless generated a non-empty error file";
+  }
+
+  # sanity check
+  unless (-e $article_tmp) {
+    die "Error: the edtfile tool did not generate the expected file '$article_tmp'";
+  }
+  unless (-r $article_tmp) {
+    die "Error: the file generated by the edtfile tool, '$article_tmp', is not readable";
+  }
+
 }
 
-# sanity check
-unless (-e $article_tmp) {
-  die "Error: the edtfile tool did not generate the expected file '$article_tmp'";
-}
-unless (-r $article_tmp) {
-  die "Error: the file generated by the edtfile tool, '$article_tmp', is not readable";
-}
-
-# rename
-move ($article_tmp, $article_miz) == 1
-  or die "Error: unable to rename the temporary file\n\n  $article_tmp\n\nto\n\n  $article_miz\n\nin the work directory\n\n  $workdir .\n\nThe error was\n\n  $!";
-
-# dellink
-system ("dellink -q -s -l $article_miz > /dev/null 2> /dev/null") == 0
-  or die "Error: Something went wrong when calling dellink on $article_name: the error was\n\n$!";
-if (-s $article_err) {
-  die "Error: although the dellink tool returned successfully, it nonetheless generated a non-empty error file";
+sub verify {
+  my $article_name = shift;
+  system ("$verifier -s -q -l $article_miz > /dev/null 2> /dev/null") == 0
+    or die "Error: something went wrong verifying $article_miz: the error was\n\n$!";
+  unless (-z $article_err) {
+    die "Error: although the verifier at $verifier returned successfully, it nonetheless generated a non-empty error file";
+  }
 }
 
-# edtfile
-system ("edtfile $article_name > /dev/null 2> /dev/null") == 0
-  or die "Error: Something went wrong during the call to edtfile on $article_name:\n\n  $!";
-if (-s $article_err) {
-  die "Error: although the edtfile tool returned successfully, it nonetheless generated a non-empty error file";
+sub absrefs {
+  my $article_name = shift;
+  my $absrefs_stylesheet = catfile ($stylesheet_dir, 'addabsrefs.xsl');
+  my $article_xml = $article_name . '.xml';
+  my $article_xml_absrefs = $article_name . '.xml1';
+  unless (-e $absrefs_stylesheet) {
+    die "The absolute reference stylesheet could not be found under $stylesheet_dir!";
+  }
+  unless (-r $absrefs_stylesheet) {
+    die "The absolute reference styesheet under $stylesheet_dir is not readable.";
+  }
+  chdir $workdir;
+  system ("xsltproc $absrefs_stylesheet $article_xml 2> /dev/null > $article_xml_absrefs") == 0 or
+    die "Something went wrong when creating the absolute reference XML: the error was\n\n$!";
 }
 
-# sanity check
-unless (-e $article_tmp) {
-  die "Error: the edtfile tool did not generate the expected file '$article_tmp'";
-}
-unless (-r $article_tmp) {
-  die "Error: the file generated by the edtfile tool, '$article_tmp', is not readable";
-}
+sub load_miz {
+  my $article_name = shift;
+  my @article_lines = ();
 
-# load
-my @article_lines = ();
+  open my $miz, '<', $article_in_workdir # we already 'know' this is readable
+    or die "Couldn't open an input file handle for $article_miz_path!";
+  while (defined (my $line = <$miz>)) {
+    chomp $line;
+    push (@article_lines, $line);
+  }
+  close $miz
+    or die "Couldn't close the input file handle for $article_miz_path!";
 
-open my $miz, '<', $article_in_workdir # we already 'know' this is readable
-  or die "Couldn't open an input file handle for $article_miz_path!";
-while (defined (my $line = <$miz>)) {
-  chomp $line;
-  push (@article_lines, $line);
-}
-close $miz
-  or die "Couldn't close the input file handle for $article_miz_path!";
+  return \@article_lines;
 
-my $num_article_lines = scalar @article_lines;
-
-### 3. Verify (and generate article XML)
-system ("$verifier -s -q -l $article_miz > /dev/null 2> /dev/null") == 0
-  or die "Error: something went wrong verifying $article_miz: the error was\n\n$!";
-unless (-z $article_err) {
-  die "Error: although the verifier at $verifier returned successfully, it nonetheless generated a non-empty error file";
 }
 
-### 4. Generate the absolute reference version of the generated XML
-my $absrefs_stylesheet = catfile ($stylesheet_dir, 'addabsrefs.xsl');
-my $article_xml = $article_name . '.xml';
-my $article_xml_absrefs = $article_name . '.xml1';
-unless (-e $absrefs_stylesheet) {
-  die "The absolute reference stylesheet could not be found under $stylesheet_dir!";
+sub load_idx {
+  my $article_name = shift;
+  my $article_idx = $article_name . '.idx';
+  my %idx_table = ();
+  
+  # sanity
+  unless (-e $article_idx) {
+    die "IDX file doesn't exist in the working directory ($workdir)!";
+  }
+  unless (-r $article_idx) {
+    die "IDX file in the working directory ($workdir) is not readable!";
+  }
+  
+  my $idx_parser = XML::LibXML->new();
+  my $idx_doc = $idx_parser->parse_file ($article_idx);
+  my $symbol_xpath_query 
+    = 'Symbols/Symbol'; # this might need to change in the future
+  my @symbols = $idx_doc->findnodes ($symbol_xpath_query);
+  foreach my $symbol (@symbols) {
+    my $vid = $symbol->findvalue ('@nr');
+    my $name = $symbol->findvalue ('@name');
+    $idx_table{$vid} = $name;
+  }
+  
+  return \%idx_table;
 }
-unless (-r $absrefs_stylesheet) {
-  die "The absolute reference styesheet under $stylesheet_dir is not readable.";
-}
-chdir $workdir;
-system ("xsltproc $absrefs_stylesheet $article_xml 2> /dev/null > $article_xml_absrefs") == 0 or
-  die "Something went wrong when creating the absolute reference XML: the error was\n\n$!";
 
-### 5. Load the idx file
-my $article_idx = $article_name . '.idx';
-my %idx_table = ();
+foreach my $article_name (@article_names) {
+  accom ($article_name);
+  jaone ($article_name);
+  verify ($article_name);
+  absrefs ($article_name);
 
-# sanity
-unless (-e $article_idx) {
-  die "IDX file doesn't exist in the working directory ($workdir)!";
-}
-unless (-r $article_idx) {
-  die "IDX file in the working directory ($workdir) is not readable!";
-}
+  my @article_lines = @{load_miz ($article_name)};
+  my $num_article_lines = scalar @article_lines;
 
-my $idx_parser = XML::LibXML->new();
-my $idx_doc = $idx_parser->parse_file ($article_idx);
-my $symbol_xpath_query 
-  = 'Symbols/Symbol'; # this might need to change in the future
-my @symbols = $idx_doc->findnodes ($symbol_xpath_query);
-foreach my $symbol (@symbols) {
-  my $vid = $symbol->findvalue ('@nr');
-  my $name = $symbol->findvalue ('@name');
-  $idx_table{$vid} = $name;
+  my %idx_table = %{load_idx ($article_name)};
+
+  # article environment
+  my @vocabularies = fetch_directive ($article_name, 'Vocabularies');
+  my @notations = fetch_directive ($article_name, 'Notations');
+  my @constructors = fetch_directive ($article_name, 'Constructors');
+  my @registrations = fetch_directive ($article_name, 'Registrations');
+  my @requirements = fetch_directive ($article_name, 'Requirements');
+  my @definitions = fetch_directive ($article_name, 'Definitions');
+  my @theorems = fetch_directive ($article_name, 'Theorems');
+  my @schemes = fetch_directive ($article_name, 'Schemes');
+
 }
 
 ######################################################################
@@ -413,17 +489,12 @@ foreach my $symbol (@symbols) {
 ######################################################################
 
 sub fetch_directive {
+  my $article_name = shift;
   my $directive = shift;
 
   chdir $workdir;
   system ("envget -l $article_miz > /dev/null 2> /dev/null") == 0
     or die "envget died working on $article_miz in $workdir!";
-
-  # This is the way things should be, but envget doesn't behave as expected!
-
-  # unless ($? == 0) {
-  #   die ("Something went wrong when calling envget on $article_base.\nThe error was\n\n  $!");
-  # }
 
   # But let's check for an error file:
   unless (-z $article_err) {
@@ -449,26 +520,7 @@ sub fetch_directive {
   return @directive_items;
 }
 
-# article environment
-my @vocabularies = fetch_directive ('Vocabularies');
-my @notations = fetch_directive ('Notations');
-my @constructors = fetch_directive ('Constructors');
-my @registrations = fetch_directive ('Registrations');
-my @requirements = fetch_directive ('Requirements');
-my @definitions = fetch_directive ('Definitions');
-my @theorems = fetch_directive ('Theorems');
-my @schemes = fetch_directive ('Schemes');
-
 my @mml_lar = ();
-
-# ensure that we can read mml.lar
-my $mml_lar_path = catfile ($mizfiles, 'mml.lar');
-unless (-e $mml_lar_path) {
-  die "The file mml.lar doesn't exist under $mizfiles!";
-}
-unless (-r $mml_lar_path) {
-  die "The file mml.lar under $mizfiles is not readable!";
-}
 
 sub read_mml_lar {
   open my $mmllar, '<', $mml_lar_path
@@ -2164,30 +2216,29 @@ Alpha!
 
 =head1 USAGE
 
-  itemize.pl [options] ARTICLE
+  itemize.pl [options] ARTICLES
 
 =head1 REQUIRED ARGUMENTS
 
 =over
 
-=item <ARTICLE>
+=item <ARTICLES>
 
-ARTICLE should be the name of an article.  If ARTICLE ends with
+ARTICLES should be a list of names of article.  If a name ends with
 ".miz", then the part of the article before the ".miz" will be treated
 as the name of the article.
 
-ARTICLE will be looked for in the directory specified by the
---article-source-dir option.  If that option is unset, then the 'mml'
-subdirectory of whatever is specified by the MIZFILES environment
-variable will be used.
+The articles listed in ARTICLES will be looked for in the directory
+specified by the --article-source-dir option.  If that option is
+unset, then the 'mml' subdirectory of whatever is specified by the
+MIZFILES environment variable will be used.
 
-ARTICLE must be at most 1 but at most 8 characters long, all
-alphanumeric (though the underscore character '_' is permitted)
-excluding an optional ".miz" file extension.
+Each article in ARTICLES must be at most 1 but at most 8 characters
+long, all alphanumeric (though the underscore character '_' is
+permitted) excluding an optional ".miz" file extension.
 
 =for Euclid:
-     ARTICLE.type: /^[A-Za-z0-9_]{1,8}(\.miz)?/
-     ARTICLE.type.error:   Article must be at most 8 characters long, all alphanumeric (or '_'); it may end in '.miz', and this is not counted in the limit of 8 characters.  You supplied 'ARTICLE'.
+     repeatable
 
 =back
 
@@ -2214,19 +2265,19 @@ PATH environment variable will be used.
 
 =item --article-source-dir=<DIRECTORY>
 
-Take ARTICLE from DIRECTORY.  Both relative and absolute paths are
+Take ARTICLES from DIRECTORY.  Both relative and absolute paths are
 acceptable.
 
 If this option is unset, then the MIZFILES environment variable will
 be consulted, and the subdirectory 'mml' will be the source for
-ARTICLE.
+ARTICLES.
 
 =item --result-dir=<RESULT-DIRECTORY>
 
-Make a local mizar database for ARTICLE in RESULT-DIRECTORY, which
+Make a local mizar database for ARTICLES in RESULT-DIRECTORY, which
 should be an absolute path.  The database will itself be a subdirecory
-of RESULT-DIRECTORY called by the same name as ARTICLE; the database
-itself will contain subdirectories 'prel' and 'text'.
+of RESULT-DIRECTORY called 'items'; the database itself will contain
+subdirectories 'prel' and 'text'.
 
 RESULT-DIRECTORY, if unset, defaults to the current directory.  If
 set, it should be a path; it can be either an absolute path (beginning
@@ -2277,17 +2328,17 @@ Print the usual program information.
 
 This program divides a mizar article into its constituent pieces.
 
-A directory called by the same name as ARTICLE will be created in the
-directory specified by the --result-dir option.  The default is to use
-the current directory.
+A directory called 'items' will be created in the directory specified
+by the --result-dir option.  The default is to use the current
+directory.
 
-Upon termination, the directory ARTICLE will be a mizar "working
+Upon termination, the 'items' directory will be a mizar "working
 directory" containing subdirectories "dict", "prel", and "text".
 Inside the "text" subdirectory there will be as many new mizar
-articles as there are items in ARTICLE.  The "dict" subdirectory will
-likewise contain as vocabulary files as there are items in ARTICLE.
-The "prel" subdirectory will contain the results of calling miz2prel
-on each of the standalone articles.
+articles as there are items generated from ARTICLES.  The "dict"
+subdirectory will likewise contain as vocabulary files as there are
+items in ARTICLES.  The "prel" subdirectory will contain the results of
+calling miz2prel on each of the standalone articles.
 
 =head1 DIAGNOSTICS
 
