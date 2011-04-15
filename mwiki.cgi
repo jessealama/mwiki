@@ -97,6 +97,7 @@ sub pr_die
 
 sub pr_die_unlock
 {
+    printheader ();
     pr_print(@_);
     print $query->end_html;
     unlockwiki();
@@ -609,6 +610,7 @@ my $pre_receive_file = '/var/cache/mwiki/admin' . '/' . 'pre-receive';
 
 sub print_successful_registration_message {
   my $username = shift;
+  printheader ();
   print <<SUCCESS;
 
 <p>
@@ -747,6 +749,7 @@ USER_CONFIG
       pr_die_unlock ($bad_username);
     }
   } else {
+    printheader ();
     print $registration_form;
   }
 }
