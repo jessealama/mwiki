@@ -101,8 +101,8 @@ MIZROOTFILES=mml.ini mml.vct mizar.dct mizar.msg
 
 # gitolite
 
-GITOLITE_REPO=/home/urban/ec/gitolite
-#GITOLITE_REPO=git://github.com/sitaramc/gitolite.git
+#GITOLITE_REPO=/home/urban/ec/gitolite
+GITOLITE_REPO=git://github.com/sitaramc/gitolite.git
 GITOLITE_SOURCE_DIR=$(REPOS_BASE)/gitolite-source
 GITOLITE_BIN_DIR=$(MWUSER_HOME)/bin
 
@@ -124,12 +124,12 @@ gitolite-setup:
 	cp $(MWUSER_HOME)/.ssh/id_rsa.pub /tmp/$(MWUSER).pub
 	sudo -u $(MWUSER) sh -c 'export HOME=$(MWUSER_HOME) && export PATH=$$PATH:$$HOME/bin && gl-setup  -q /tmp/$(MWUSER).pub'
 	rm /tmp/$(MWUSER).pub
-	touch $(MWUSER_HOME)/.gitolite/conf/users.conf # initially empty list of users
 	chown -R $(MWUSER):$(MWUSER) $(REPOS_BASE)
 	mkdir -p $(GITOLITE_ADMIN_DIR)
 	chown -R $(MWUSER):$(MWUSER) $(GITOLITE_ADMIN_DIR)
 	sudo -u $(MWUSER) git clone $(MWUSER)@localhost:gitolite-admin $(GITOLITE_ADMIN_DIR)
 	sed -e "s|@@MWUSER@@|$(MWUSER)|g" < gitolite-config > $(GITOLITE_ADMIN_DIR)/conf/gitolite.conf
+	# sudo -u $(MWUSER) touch $(GITOLITE_ADMIN_DIR)/conf/users.conf # initially empty list of users
 	cd $(GITOLITE_ADMIN_DIR) && sudo -u $(MWUSER) sh -c 'export HOME=$(MWUSER_HOME) && export PATH=$$PATH:$$HOME/bin && git commit -a -m "Include users.conf in the config file and register the mwiki with gitolite." && git push'
 	# suexec config
 	chown -R $(MWUSER):$(MWUSER) /home/$(MWUSER)
