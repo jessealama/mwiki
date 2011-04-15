@@ -97,6 +97,7 @@ sub pr_die
 
 sub pr_die_unlock
 {
+    printheader ();
     pr_print(@_);
     print $query->end_html;
     unlockwiki();
@@ -113,21 +114,9 @@ if(defined($git_project) && ($git_project =~ /^([a-zA-Z0-9_\-\.]+)$/))
 else { pr_die("The repository name \"$git_project\" is not allowed"); }
 
 if ((defined $action) 
-    && (($action =~ /^(edit)$/) || ($action =~ /^(commit)$/) || ($action =~ /^(history)$/) 
-<<<<<<< variant A
-	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/) || ($action =~ /^(dependencies)$/) || ($action =~ /^(register)$/)))
->>>>>>> variant B
-	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/) 
+    && (($action =~ /^(edit)$/) || ($action =~ /^(commit)$/) || ($action =~ /^(history)$/)
+	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/)
 	|| ($action =~ /^(dependencies)$/) || ($action =~ /^(register)$/)))
-####### Ancestor
-<<<<<<< Temporary merge branch 1
-	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/) || ($action =~ /^(dependencies)$/)  ))
-=======
- 	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/)
- 	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/)
- 	|| ($action =~ /^(register)$/)))
->>>>>>> Temporary merge branch 2
-======= end
 {
     $action = $1;
 }
@@ -176,7 +165,7 @@ if (-d $frontend_repo)
 }
 else
 {
-    pr_die "The repository \"$git_project\" does not exist";
+    pr_die "The repository \"$git_project\" does not exist: $frontend_repo";
 }
 
 if(!(defined $backend_repo_path) || (length($backend_repo_path) == 0))
@@ -621,6 +610,7 @@ my $pre_receive_file = '/var/cache/mwiki/admin' . '/' . 'pre-receive';
 
 sub print_successful_registration_message {
   my $username = shift;
+  printheader ();
   print <<SUCCESS;
 
 <p>
@@ -670,8 +660,18 @@ if($action eq "register") {
     if ($username =~ /[a-z0-9A-Z-_]{1,25}/) {
       lockwiki ();
       # first, add the user to the list of all users
+      # sanity
+      unless (-e $gitolite_user_conf_file) {
+	pr_die_unlock ("<p>Uh oh: the gitolite user configuration file doesn't exist at the expected location '$gitolite_user_conf_file'.  Please complain loudly to the administrators.</p>");
+      }
+      unless (-r $gitolite_user_conf_file) {
+	pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unreadable.  Please complain loudly to the administrators.</p>");
+      }
+      unless (-x $gitolite_user_conf_file) {
+	pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unwritable.  Please complain loudly to the administrators.</p>");
+      }
       open (USER_CONF_FILE, '>>', $gitolite_user_conf_file)
-	or pr_die_unlock ("<p>Uh oh: something went wrong while opening the gitolite user configuration file to register '$username':$gitolite_user_conf_file</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
+	or pr_die_unlock ("<p>Uh oh: something went wrong while opening the gitolite user configuration file '$gitolite_user_conf_file' to register '$username':</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
       print USER_CONF_FILE <<USER_CONFIG;
 \@users = $username
 repo $username
@@ -693,7 +693,8 @@ USER_CONFIG
 	or pr_die_unlock ("Uh oh: something went wrong closing the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
 
       # clone the public repo for the newly registered user
-      my $user_gitolite_bare_repo = "/home/www/repositories/$username.git";
+      # ###TODO: change this using the backend path
+      my $user_gitolite_bare_repo = "/home/mwuser/repositories/$username.git";
       my $git_clone_exit_code =
 	system ('git', 'clone', '--bare', $frontend_repo, $user_gitolite_bare_repo);
       if ($git_clone_exit_code != 0) {
@@ -748,6 +749,7 @@ USER_CONFIG
       pr_die_unlock ($bad_username);
     }
   } else {
+    printheader ();
     print $registration_form;
   }
 }

@@ -6,3 +6,11 @@ Alias /##REPO_NAME## "##PUBLIC_REPO##/html"
   Order allow,deny
   allow from all
 </Directory>
+
+<Directory /var/www/bin/>
+        AllowOverride None
+        Options ExecCGI SymLinksIfOwnerMatch
+        AddHandler cgi-script .cgi .pl
+        Order allow,deny
+        Allow from all
+</Directory>

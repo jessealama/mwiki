@@ -1,10 +1,8 @@
 #!/bin/sh
 
-#repos_base=/home/mwuser/clones
-#mizfiles=/home/mptp/mizwrk/7.11.05_4.133.1080
 mwuser=mwuser
-mizfiles=/home/alama/mizinst/7.11.06_4.150.1103
-xsl4miz=/home/alama/xsl4mizar
+mizfiles=/home/urban/mizinst/7.11.07_4.160.1126
+xsl4miz=/home/urban/gr/xsl4mizar
 num_articles=2
 
 
@@ -19,5 +17,7 @@ make -f Makefile.smallinstall $targets \
     XSL4MIZ=$xsl4miz \
     NUM_ARTICLES=$num_articles \
     MWUSER=mwuser \
-    MAKEJOBS=24 \
-    WIKIHOST=mizar.cs.ualberta.ca
+    MAKEJOBS=2 \
+    WIKIHOST=localhost \
+    REPO_NAME=goo1
+

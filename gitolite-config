@@ -1,10 +1,12 @@
 include "users.conf"
 
 repo gitolite-admin
-     RW+     =   www-data
+     RW+     =   @@MWUSER@@
 
 repo testing
      RW+     =   @all
+     R	     =	 gitweb daemon
 
-repo mwiki
-     RW+     = @all
+repo public
+     RW+     =	@all
+     R	     = 	gitweb daemon
