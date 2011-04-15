@@ -67,4 +67,48 @@ snapshots are also possible.
 #### Use for many users
 
 - again, variable MW_BTRFS tells to use btrfs
--
+
+### Experiments
+
+#### Summary
+
+We looked at the degree of sharing due to copy-on-write for the dataset
+"mizar text unpacked", containing 53 versions, from version 7.5.01\_4.32.908
+to 7.11.07'_4.160.1126. Each version is stored by cloning the previous
+version, and updating only those files that have a different size in the
+new version. 
+
+Total disk usage of these versions on ext4 is 11958mb (average 226mb).
+
+Space usage on btrfs with COW cloning, without compression:
+disk usage: 6219mb / including filesystem overhead: 7956mb
+
+With fs overhead, this means that this technique saves about 34% disk
+space with respect to the original, unshared, data.
+
+#### Measurements
+
+- Input data: "mizar text unpacked"
+- Mizar versions: 53 versions, from 7.5.01\_4.32.908 to 7.11.07\_4.160.1126
+- Disk usages (using "du"):
+-  source, on ext4:  total: 11958m (average single version 225.6m)
+-  target, on btrfs: total: 11786m (average single version 222.4m) 
+
+Apparent sizes (using "du --apparent-size") (why are these not equal?
+different apparent sizes for the directories??):
+
+- source, on ext4:  total: 11256m (average single version 212.4m)
+- target, on btrfs: total: 11248m (average single version 212.2m)
+
+        $ btrfs fi show test
+        Label: 'test'  uuid: 270f1457-25c6-43c5-b6f9-f0388413deea
+        Total devices 1 FS bytes used 6.07GB
+        devid    1 size 10.00GB used 7.77GB path /dev/xvdb
+
+Btrfs v0.19
+
+        $ df -B 1m /mnt/data
+        Filesystem           1M-blocks      Used Available Use% Mounted on
+        /dev/xvdb                10240      6219      3470  65% /mnt/data
+
+(N.B.  6219/1024 = 6.07)
