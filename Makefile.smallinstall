@@ -343,5 +343,6 @@ clean:
 	rm -f $(MWUSER_HOME)/bin/gl-*
 	rm -f $(MWUSER_HOME)/bin/sshkeys-lint
 	# mwuser stuff
-	find $(MWUSER_HOME) -type f -exec rm {} ";";
-	find $(MWUSER_HOME) -mindepth 1 -type d ! -name "\.ssh" -exec rm -Rf {} ";"
+	find $(MWUSER_HOME) -mindepth 1 -maxdepth 1 -type d ! -name "\.ssh" -exec rm -Rf {} ";"
+	find $(MWUSER_HOME) -mindepth 1 -maxdepth 1 -type f -exec rm {} ";";
+
