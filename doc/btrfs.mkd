@@ -70,7 +70,7 @@ snapshots are also possible.
 
 ### Experiments
 
-#### Summary
+#### Space: Summary
 
 We looked at the degree of sharing due to copy-on-write for the dataset
 "mizar text unpacked", containing 53 versions, from version 7.5.01\_4.32.908
@@ -86,7 +86,7 @@ disk usage: 6219mb / including filesystem overhead: 7956mb
 With fs overhead, this means that this technique saves about 34% disk
 space with respect to the original, unshared, data.
 
-#### Measurements
+#### Space: Measurements
 
 - Input data: "mizar text unpacked"
 - Mizar versions: 53 versions, from 7.5.01\_4.32.908 to 7.11.07\_4.160.1126
@@ -112,3 +112,244 @@ Btrfs v0.19
         /dev/xvdb                10240      6219      3470  65% /mnt/data
 
 (N.B.  6219/1024 = 6.07)
+
+#### Time: Summary
+
+The time required to create a clone, both an empty one and a copy of an
+existing 30G subvolume, is constant at 0.03s up until 10k clones. Around
+50k clones, it starts slowing down.
+
+The slowdown is less pronounced if we distribute the clones over
+subdirectories according to the first two characters of their names ("00"
+to "ff" -- the clone names are sha1sums), so as to avoid a directory with a
+very large number of entries. However, even with these prefix-subdirectories,
+cloning still slows down beyond 10k clones, so the slowdown also depends on
+the number of clones per filesystem.
+
+The time required to destroy a clone is constant at 0.14s, at least until
+10k clones.
+
+#### Time: Measurements
+
+- creating empty subvolumes
+
+<table>
+  <thead>
+    <tr>
+      <th>#clones</th>
+      <th>time (sec/clone)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>10</td>
+      <td>0.020</td>
+    </tr>
+    <tr>
+      <td>100</td>
+      <td>0.020</td>
+    </tr>
+    <tr>
+      <td>1000</td>
+      <td>0.022</td>
+    </tr>
+    <tr>
+      <td>5000</td>
+      <td>0.024</td>
+    </tr>
+    <tr>
+      <td>10000</td>
+      <td>0.024</td>
+    </tr>
+  </tbody>
+</table>
+
+- creating clones of 30G subvolume (unpacked mwiki.tar.gz)
+
+<table>
+  <thead>
+    <tr>
+      <th>#clones</th>
+      <th>time (sec/clone)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>10</td>
+      <td>0.024</td>
+    </tr>
+    <tr>
+      <td>100</td>
+      <td>0.023</td>
+    </tr>
+    <tr>
+      <td>1000</td>
+      <td>0.025</td>
+    </tr>
+    <tr>
+      <td>5000</td>
+      <td>0.025</td>
+    </tr>
+    <tr>
+      <td>10000</td>
+      <td>0.029</td>
+    </tr>
+    <tr>
+      <td>50000</td>
+      <td>0.036</td>
+    </tr>
+  </tbody>
+</table>
+   
+<table>
+  <thead>
+    <tr>
+      <th>#clones</th>
+      <th>time (sec/clone)</th>
+    </tr>
+  </thead>
+  <tbody>
+<tr>
+<td>100</td>
+<td>0.024</td>
+<tr>
+<tr>
+<td>1000</td>
+<td>(?)</td>
+</tr>
+<tr>
+<td>10000</td>
+<td>0.027</td>
+</tr>
+<tr>
+<td>50000</td>
+<td>0.036</td>
+</tr>
+<tr>
+<td>100000</td>
+<td>0.051</td>
+</tr>
+<tr>
+<td>200000</td>
+<td>0.070</td>
+</tr>
+</tbody>
+</table>
+
+- creating clones of 30G subvolume *with one level of prefix dir (00/ .. ff/)*
+
+<table>
+  <thead>
+    <tr>
+      <th>
+        <td>#clones</td>
+        <td>time (sec/clone)</td>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>100</td>
+      <td>0.024</td>
+    </tr>
+    <tr>
+      <td>1000</td>
+      <td>0.025</td>
+    </tr>
+    <tr>
+      <td>10000</td>
+      <td>0.028</td>
+    </tr>
+    <tr>
+      <td>100000</td>
+      <td>0.039</td>
+    </tr>
+  </tbody>
+</table>
+
+- destroying empty subvolumes
+
+<table>
+  <thead>
+    <tr>
+      <th>
+        <td>#clones</td>
+        <td>time (sec/clone)</td>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>10</td>
+      <td>0.129</td>
+    </tr>
+    <tr>
+      <td>100</td>
+      <td>0.139</td>
+    </tr>
+    <tr>
+      <td>1000</td>
+      <td>0.137</td>
+    </tr>
+    <tr>
+      <td>5000</td>
+      <td>0.138</td>
+    </tr>
+  </tbody>
+</table>
+
+- destroying clones of 30G subvolume
+
+<table>
+<thead>
+<tr>
+<th>
+<td>#clones</td>
+<td>time (sec/clone)</td>
+</th>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>0.119</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.140</td>
+</tr>
+<tr>
+<td>1000</td>
+<td>0.126</td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<thead>
+<tr>
+<th>
+<td>#clones</td>
+<td>time (sec/clone)</td>
+</th>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>0.128</td>
+</tr>
+<tr>
+<td>1000</td>
+<td>0.137</td>
+</tr>
+<tr>
+<td>10000</td>
+<td>0.139</td>
+</tr>
+</tbody>
+</table>
+
+- untarring 30G "mwiki.tar.gz" into subvolume
+
+        real    6m47.861s
+        user    2m10.650s
+        sys     2m52.360s
