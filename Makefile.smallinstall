@@ -294,6 +294,7 @@ mwiki: public-repos apacheconf
 	$(INSTALL) -m 755 \
            --owner=$(MWUSER) --group=$(MWUSER) mwiki.cgi \
 	  $(CGILIB)/mwiki.cgi
+	chown -R $(MWUSER):$(MWUSER) $(CGILIB)
 	cd $(APACHE_ROOT)/etc/apache2/sites-enabled \
 	  && ln -f -s ../sites-available/$(REPO_NAME) $(REPO_NAME)
 	#chown -R $(MWUSER):$(MWUSER) /home/$(MWUSER)
