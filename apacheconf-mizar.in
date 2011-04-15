@@ -14,5 +14,3 @@ Alias /##REPO_NAME## "##PUBLIC_REPO##/html"
         Order allow,deny
         Allow from all
 </Directory>
-
-SuexecUserGroup ##MWUSER## ##MWUSER##
