@@ -343,5 +343,5 @@ clean:
 	rm -f $(MWUSER_HOME)/bin/gl-*
 	rm -f $(MWUSER_HOME)/bin/sshkeys-lint
 	# mwuser stuff
-	rm -Rf /home/mwuser/*
-
+	find $(MWUSER_HOME) -type f -exec rm {} ";";
+	find $(MWUSER_HOME) -type d ! -name "\.ssh" -exec rm -Rf {} ";"
