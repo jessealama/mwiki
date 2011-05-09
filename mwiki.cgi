@@ -207,7 +207,8 @@ my $wikihost= "";
 
 
 # ###TODO: reading these vars from the config is now probably unnecessary
-if (-d $gitweb_repo_path)
+if (-d $gitweb_repo_path || -l $gitweb_repo_path)
+#                        ^^^^^ not elegant: checking whether this is a symlink.
 {
     chdir $gitweb_repo_path;
     $backend_repo_path = `$git config mwiki.backend`;
@@ -223,6 +224,9 @@ else
     pr_die "The repository \"$git_project\" does not exist: $gitweb_repo_path";
 }
 
+# hardcoded
+$backend_repo_path = "/home/mwuser/repositories/$git_project";
+
 if(!(defined $backend_repo_path) || (length($backend_repo_path) == 0))
 {
     pr_die "No backend repository for the project $git_project";
@@ -232,6 +236,8 @@ if(!(defined $backend_repo_path) || (length($backend_repo_path) == 0))
 
 if($backend_repo_path =~ /^(.*)$/) { $backend_repo_path = $1; }
 
+# hardcoded -- should be a function of $git_projet
+$htmldir = "/home/mwuser/clones/public-sandbox/html";
 
 if(!(defined $htmldir) || (length($htmldir) == 0))
 {
