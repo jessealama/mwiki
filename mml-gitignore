@@ -68,3 +68,9 @@ replths.txt
 syntax.txt
 xml
 xsl
+
+# this file
+.gitignore
+
+# our perl magic
+perl
