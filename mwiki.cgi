@@ -874,7 +874,9 @@ USER_CONFIG
       pr_die_unlock ($bad_username);
     }
   } else {
+    printheader ();
     print $registration_form;
+    print "<center><font size='+5' style='color:red;'>&iexcl;TODO!</font></center>";
   }
 }
 
