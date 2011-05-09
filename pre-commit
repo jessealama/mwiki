@@ -74,6 +74,7 @@ my @non_art_changed
 
 
 unless (scalar (@non_art_changed) == 0) {
+    chomp (@non_art_changed);
     pc_print ("Only .$article_ext and .$special_ext files are permitted to be committed: \"$non_art_changed[0]\"  Sorry.");
   exit (1)
 }
