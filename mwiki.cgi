@@ -96,6 +96,10 @@ elsif  ($action =~ /^(users)$/)
 {
     $titleaction = "Project users";
 }
+elsif  ($action =~ /^(register)$/)
+{
+    $titleaction = "Register with formal mathematics wiki";
+}
 
 }
 
