@@ -5,6 +5,11 @@ use CGI;
 use CGI::Pretty ":standard";
 use IO::Socket;
 use HTTP::Request::Common;
+use File::Copy;
+
+use lib '.';
+
+use mw_common qw(MWUSER REPO_NAME MW_BTRFS GITWEB_ROOT);
 
 ## TODO: we should think about how to allow customization
 ##       of the following variables.
@@ -15,14 +20,37 @@ use HTTP::Request::Common;
 ## NOTE: The htmldir is now a git config
 ##       variable of the backend and frontend.
 
-# directory where frontends are stored
-my $frontend_dir  = "/var/cache/git/";
-
 # path to the git cgi
 my $lgitwebcgi    = "http://mws.cs.ru.nl:1234/";
 
 # the git binary - need absolute path - we run in taint mode
 my $git           = "/usr/bin/git";
+
+# ###TODO: make these changable by sed-ing
+# the MWUSER - everything is now in his gitolite, this should be in sync with Makefile.smallinstall
+my $MWUSER 	  = MWUSER;
+
+# the REPO_NAME - sync with Makefile.smallinstall, all gitweb repos dwell bellow this dir
+my $REPO_NAME	  = REPO_NAME;
+
+# do we use the btrfs cloning?- sync with smallinstall
+my $MW_BTRFS	  = MW_BTRFS;
+
+# gitweb
+
+my $GITWEB_ROOT   = GITWEB_ROOT;
+
+
+# directory where frontends are stored
+my $GITWEB_REPOS  = "$GITWEB_ROOT/$REPO_NAME/";
+
+my $MWUSER_HOME	  = "/home/$MWUSER";
+my $REPOS_BASE    = "$MWUSER_HOME/clones";
+my $BARE_REPOS    = "$MWUSER_HOME/repositories";
+my $MWADMIN_DIR   = "$MWUSER_HOME/mwadmin";
+my $PUBLIC_REPO   = "$REPOS_BASE/public";
+my $BARE_PUBLIC_REPO = "$BARE_REPOS/public.git";
+
 
 my $query	  = new CGI;
 
@@ -38,6 +66,11 @@ my $git_project	  = $query->param('p');
 my $ProblemSource = $query->param('ProblemSource');
 my $input_article = $query->param('Formula');
 my $message       = $query->param('Message');
+
+# registering
+my $username      = $query->param('username');
+my $passwd        = $query->param('password');
+my $pubkey        = $query->param('pubkey');
 
 # this is required to untaint backticks
 # $ENV{"PATH"} = "";
@@ -59,6 +92,11 @@ elsif  ($action =~ /^(gitweb)$/)
 {
     $titleaction = "Project history";
 }
+elsif  ($action =~ /^(users)$/)
+{
+    $titleaction = "Project users";
+}
+
 }
 
 print $query->header();
@@ -98,6 +136,22 @@ sub pr_die_unlock
     exit;
 }
 
+sub clone_full_dirs_report
+{
+    my ($origin,$clone) = @_;
+    my ($result,$clone_output)  = mw_common::clone_full_dirs($origin,$clone);
+
+    my $clone_exit_code = ($result >> 8);
+    unless ($clone_exit_code == 0) {
+    pr_print ("cloning was unsuccessful from $origin to $clone : $!");
+    pr_print ("It's output was:");
+    pr_print ("$clone_output\n");
+    pr_print ("We cannot continue.");
+    exit 1;
+  }
+}
+
+
 my $aname = "";
 
 # untaint the cgi params:
@@ -108,8 +162,10 @@ if(defined($git_project) && ($git_project =~ /^([a-zA-Z0-9_\-\.]+)$/))
 else { pr_die("The repository name \"$git_project\" is not allowed"); }
 
 if ((defined $action) 
-    && (($action =~ /^(edit)$/) || ($action =~ /^(commit)$/) || ($action =~ /^(history)$/) 
-	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/) || ($action =~ /^(dependencies)$/)  ))
+    && (($action =~ /^(edit)$/) || ($action =~ /^(commit)$/) 
+	|| ($action =~ /^(history)$/) || ($action =~ /^(users)$/)
+	|| ($action =~ /^(blob_plain)$/) || ($action =~ /^(gitweb)$/)
+	|| ($action =~ /^(dependencies)$/) || ($action =~ /^(register)$/)))
 {
     $action = $1;
 }
@@ -132,10 +188,11 @@ if ((defined $input_file) && ($input_file =~ /^((mml|dict)\/([a-z0-9_]+)[.]($art
     ($aname, $this_ext) = ($3, $4);
 }
 elsif ($action =~ /^(gitweb)$/) { $aname=""; }
+ elsif ($action =~ /^(register)$/) { } # do nothing, but for god's sake, don't go to the next clause!
 else { pr_die("The file name \"$input_file\" is not allowed"); }
 
 
-my $frontend_repo = $frontend_dir . $git_project;
+my $gitweb_repo_path = $GITWEB_REPOS . $git_project;
 my $backend_repo_path = "";
 
 # the directory with the htmlized wiki files (needed for index and other links)
@@ -144,9 +201,11 @@ my $htmldir       = "";
 # the wikihost, and the true cgi path
 my $wikihost= "";
 
-if (-d $frontend_repo)
+
+# ###TODO: reading these vars from the config is now probably unnecessary
+if (-d $gitweb_repo_path)
 {
-    chdir $frontend_repo;
+    chdir $gitweb_repo_path;
     $backend_repo_path = `$git config mwiki.backend`;
     chomp($backend_repo_path);
     $htmldir = `$git config mwiki.htmldir`;
@@ -157,7 +216,7 @@ if (-d $frontend_repo)
 }
 else
 {
-    pr_die "The repository \"$git_project\" does not exist";
+    pr_die "The repository \"$git_project\" does not exist: $gitweb_repo_path";
 }
 
 if(!(defined $backend_repo_path) || (length($backend_repo_path) == 0))
@@ -213,6 +272,8 @@ REND
          $viewlinks
          <li> <a href="$htmldir/">Index</a> </li>
          <li> <a href="?p=$git_project;a=gitweb">Gitweb</a> </li>
+         <li> <a href="?p=$git_project;a=register">Register</a> </li>
+         <li> <a href="?p=$git_project;a=users">Users</a> </li>
     </ul>
 </div>
 END
@@ -236,7 +297,7 @@ END1
 if($action eq "gitweb")
 {
     printheader();
-    print_iframe("$lgitwebcgi?p=$git_project");
+    print_iframe("$lgitwebcgi?p=$REPO_NAME/$git_project");
     print $query->end_html;
     exit;
 }
@@ -368,20 +429,21 @@ if($action eq "commit")
 	pr_die_unlock "";
     }
 
-# now push to frontend, disabling pre-receive
+    # ###TODO: remove the reliance on the giweb repo symlinks
+    # now push to frontend, disabling pre-receive
     pr_print ("Pushing the commit to frontend");
-    my $mv_out = system("/bin/mv -f $frontend_repo/hooks/pre-receive $frontend_repo/hooks/pre-receive.old 2>&1");
+    my $mv_out = system("/bin/mv -f $gitweb_repo_path/hooks/pre-receive $gitweb_repo_path/hooks/pre-receive.old 2>&1");
     my $git_push_output 
 	= system("$git push frontend HEAD 2>&1");
     my $git_push_exit_code = ($? >> 8);
     unless ($git_push_exit_code == 0) 
     {
 	pr_print ("Error pushing to the frontend repository: $git_push_output :: $mv_out");
-	system("/bin/cp $frontend_repo/hooks/pre-receive.old $frontend_repo/hooks/pre-receive");
+	system("/bin/cp $gitweb_repo_path/hooks/pre-receive.old $gitweb_repo_path/hooks/pre-receive");
 	pr_die_unlock ("The exit code was $git_push_exit_code");
 
     }
-    system("/bin/cp $frontend_repo/hooks/pre-receive.old $frontend_repo/hooks/pre-receive");
+    system("/bin/cp $gitweb_repo_path/hooks/pre-receive.old $gitweb_repo_path/hooks/pre-receive");
     pr_print ("All OK!");
     unlockwiki();
 }
@@ -390,14 +452,14 @@ if($action eq "commit")
 if($action eq "blob_plain")
 {
     printheader();
-    print_iframe("$lgitwebcgi?p=$git_project;a=blob_plain;f=$input_file");
+    print_iframe("$lgitwebcgi?p=$REPO_NAME/$git_project;a=blob_plain;f=$input_file");
 }
 
 ## the action for history
 if($action eq "history")
 {
     printheader();
-    print_iframe("$lgitwebcgi?p=$git_project;a=history;f=$input_file");
+    print_iframe("$lgitwebcgi?p=$REPO_NAME/$git_project;a=history;f=$input_file");
 }
 
 ## the action for dependencies
@@ -519,6 +581,8 @@ if($action eq "edit")
      <li><a href="?p=$git_project;a=dependencies;f=$input_file$sectparam">Dependencies</a> </li>
      <li><a href="$htmldir/">Index</a> </li>
      <li><a href="?p=$git_project;a=gitweb">Gitweb</a> </li>
+     <li><a href="?p=$git_project;a=register">Register</a> </li>
+     <li><a href="?p=$git_project;a=users">Users</a> </li>
   </ul>
 </div>
 <dl>
@@ -568,4 +632,266 @@ END
 
 }
 
-print $query->end_html;
+# "Register" with us by giving us your RSA public key.
+
+my $registration_form = <<REG_FORM;
+<form method="post" action="mwiki.cgi" enctype="multipart/form-data">
+Desired username: <input type="text" size="10" name="username" />
+Desired password: <input type="text" size="10" name="password" />
+<br />
+Your RSA public key: <input type="textarea" size="20" name="pubkey" />
+<input type="submit" value="Register" />
+<input type="reset" value="Reset" />
+<input type="hidden" name="p" value="$git_project">
+<input type="hidden" name="a" value="register">
+</form>
+REG_FORM
+
+my $bad_username = <<BAD_USERNAME;
+<p>
+Your username, '$username', is invalid; it must be between 1 and 25 alphanumeric characters (dash '-' and underscore '_' are allowed).  Please go back and try again.</p>
+BAD_USERNAME
+
+my $gitolite_admin_dir =  $MWUSER_HOME . '/gitolite-admin';
+my $gitolite_key_dir = $gitolite_admin_dir . '/keydir';
+my $gitolite_conf_dir = $gitolite_admin_dir . '/conf';
+my $gitolite_user_conf_file = $gitolite_conf_dir . '/users.conf';
+my $gitolite_user_list_file = $MWADMIN_DIR . '/gitolite-users';
+
+my $pre_receive_file = $MWADMIN_DIR  . '/pre-receive.in';
+
+sub print_successful_registration_message {
+  my $username = shift;
+  print <<SUCCESS;
+
+<p>
+Success!  You have registered with us.  We have made a new
+repository for you whose contents reflect the current state of the
+public wiki.  You can obtain a local copy of the repository by issuing
+the command on your machine:</p>
+
+<blockquote>
+git clone $MWUSER\@$wikihost:$username
+</blockquote>
+
+<p>
+This will create a new directory called '$username' in whatever
+directory you were in when you issued the git clone command. If you
+would like to store the repository under a different name (e.g., 'my-mizar-wiki-repo'), issue the
+command</p>
+
+<blockquote>
+git clone $MWUSER\@$wikihost:$username my-mizar-wiki-repo
+</blockquote>
+
+<p>
+If this command does not work for you, please contact us.</p>
+
+<p>
+Feel free to make whatever changes you would like to your local
+copy of your repository.  To upload your changes to our server, issue the commands:</p>
+
+<blockquote>
+git add .<br/>
+git commit -m "(fill in some clever summary of what you did here)"<br/>
+git push
+</blockquote>
+
+<p>
+Your work will then be uploaded to the server.  Again, if any of these commands fail, please get in touch with us.</p>
+
+<p align="center">
+Happy Mizaring!</p>
+
+SUCCESS
+}
+
+if($action eq "register") 
+{
+  if (defined ($username) && defined ($passwd) && defined ($pubkey)) {
+    if ($username =~ /[a-z0-9A-Z-_]{1,25}/) {
+      lockwiki ();
+      # first, add the user to the list of all users
+      # sanity
+      unless (-r $gitolite_user_conf_file) {
+	pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unreadable.  Please complain loudly to the administrators.</p>");
+      }
+      unless (-w $gitolite_user_conf_file) {
+	pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unwritable.  Please complain loudly to the administrators.</p>");
+      }
+      open (USER_CONF_FILE, '>>', $gitolite_user_conf_file)
+	or pr_die_unlock ("<p>Uh oh: something went wrong while opening the gitolite user configuration file '$gitolite_user_conf_file' to register '$username':</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
+      print USER_CONF_FILE <<USER_CONFIG;
+\@users = $username
+repo $username
+   R   = \@all
+   RW+ = $username $MWUSER
+
+USER_CONFIG
+      close USER_CONF_FILE
+	or pr_die_unlock ("Something went wrong closing the output filehandle for the user configuration file!");
+
+      # copy the given public key to the keydir
+      my $user_key_file = $gitolite_key_dir . '/' . "$username" . '.pub';
+      open (USER_KEY_FILE, '>', $user_key_file) 
+	or pr_die_unlock ("<p>Uh oh: something went wrong while opening the an output filehandle at '$user_key_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
+      print USER_KEY_FILE ("$pubkey\n");
+      close (USER_KEY_FILE)
+	or pr_die_unlock ("<p>Uh oh: something went wrong when closing the output filehandle at '$user_key_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+      chdir $gitolite_admin_dir;
+      # add the changed files (we should probably lock things here, if not earlier)
+      my $git_add_exit_code = system ('git', 'add', '.');
+      if ($git_add_exit_code != 0) {
+	my $git_add_error_message = $git_add_exit_code >> 8;
+	pr_die_unlock ("<p>Uh oh: something went wrong staging the modified files in the gitolite admin repo:</p><blockquote>" . escapeHTML ($git_add_error_message) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+      }
+      # commit these changes to the gitolite admin repo
+      my $git_commit_exit_code = system ('git', 'commit', '--quiet', '-a', '-m', "Added public key '$pubkey' for user '$username'");
+      if ($git_commit_exit_code != 0) {
+	my $git_commit_error_message = $git_commit_exit_code >> 8;
+	pr_die_unlock ("<p>Uh oh: something went wrong commiting the changes to the gitolite admin repo:</p><blockqute>" . escapeHTML ($git_commit_error_message) . "</blockquote><p>Please complain loudly to the administrators.");
+      }
+      # push the changes to the real gitolite admin repo
+      my $git_push_adm_exit_code = system ('git', 'push', '--quiet');
+      if ($git_push_adm_exit_code != 0) {
+	my $git_push_adm_error_message = $git_push_adm_exit_code >> 8;
+	pr_die_unlock ("<p>Uh oh: something went wrong pushing the changes we just made to to the gitolite admin repo:</p><blockqute>" . escapeHTML ($git_push_adm_error_message) . "</blockquote><p>Please complain loudly to the administrators.");
+      }
+
+      ### TODO: the btrfs/rsync stuff goes here
+
+      # first do filesystem clone of the backend public repo 
+
+      my $user_backend_repo = "$REPOS_BASE/$username";
+
+      clone_full_dirs_report($PUBLIC_REPO, $user_backend_repo);
+
+      # fix .git/config
+      
+      # TODO: set other vars here like makejobs, etc
+
+      my %mw_git_backend_vars = 
+	  ("user.name" => $username,
+	   "user.email" => "$username\@none.none",
+	   "mwiki.wikihost" => $wikihost,
+	   "mwiki.htmldir" => "http://$wikihost/$REPO_NAME/$username");
+
+      chdir  $user_backend_repo;
+      mw_common::set_git_vars(\%mw_git_backend_vars);
+
+      # then push to the bare repo for the newly registered user
+
+      my $bare_user_repo_ssh = "$MWUSER\@$wikihost:$username";
+
+      my $git_push_exit_code =
+	  system ('git', 'push', '--all', $bare_user_repo_ssh);
+      if ($git_push_exit_code != 0) {
+	my $git_push_error_message = $git_push_exit_code >> 8;
+	pr_die_unlock ("<p>Uh oh: something went wrong while pushing the repository for '$username':$bare_user_repo_ssh</p><blockquote>" .  escapeHTML ($git_push_error_message) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
+      }
+
+      # this now exists
+      my $user_gitolite_bare_repo = "$BARE_REPOS/$username.git";
+
+      # remove the copied frontend config, set the new
+      system("git remote rm frontend");
+      system("git remote add frontend $bare_user_repo_ssh");
+
+
+
+      my %mw_git_bare_vars = 
+      ("core.sharedRepository" => "true",
+       "daemon.receivepack" => "true",
+       "mwiki.backend" => "$user_backend_repo/",
+       "mwiki.wikihost" => $wikihost,
+       "mwiki.htmldir" => "http://$wikihost/$REPO_NAME/$username");
+
+      chdir  $user_gitolite_bare_repo;
+      mw_common::set_git_vars(\%mw_git_bare_vars);
+
+
+      system("touch $user_gitolite_bare_repo/git-daemon-export-ok");
+
+      # install hooks: pre-receive, post-update
+
+      foreach my $hookfile ("pre-receive", "post-update")
+      {
+	  open(H,"$MWADMIN_DIR/$hookfile.in") or pr_die_unlock ("Hook not readable: $MWADMIN_DIR/$hookfile.in");
+	  open(H1,">$user_gitolite_bare_repo/hooks/$hookfile") 
+	      or pr_die_unlock ("Hook not writable: $user_gitolite_bare_repo/hooks/$hookfile");
+	  while(<H>) { s|\@\@BACKEND\@\@|$user_backend_repo|g; s|\@\@MIRROR\@\@||g; print H1 $_; }
+	  close(H); close(H1);
+	  chmod 0755, "$user_gitolite_bare_repo/hooks/$hookfile";
+      }
+
+      # tell gitweb about the new repo
+      my $user_gitweb_bare_repo = $GITWEB_REPOS . "$username.git";
+      my $ln_exit_code = system('ln', '-s', $user_gitolite_bare_repo, $user_gitweb_bare_repo);
+      if ($ln_exit_code != 0) {
+	my $ln_error_message = $ln_exit_code >> 8;
+        pr_die_unlock ("Un oh: something went wrong linking '$user_gitolite_bare_repo' to '$user_gitweb_bare_repo':<blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.");
+      }
+
+      # install hooks in the backend
+
+      foreach my $hookfile ("pre-commit", "post-commit")
+      {
+	  copy("$MWADMIN_DIR/$hookfile", "$user_backend_repo/.git/hooks")
+	      or pr_die_unlock ("Cannot copy $hookfile to $user_backend_repo/.git/hooks");
+	  chmod 0755, "$user_backend_repo/.git/hooks/$hookfile";
+      }
+
+      # create the sandbox
+
+      clone_full_dirs_report($user_backend_repo, $user_backend_repo . '-sandbox');
+
+
+      # add the username to the list of all users (this introduces
+      # some redundancy in our data, but for the sake of convenience,
+      # it's easier to manage a flat list of usernames)
+      open (USERS, '>>', $gitolite_user_list_file)
+	or pr_die_unlock ("Uh oh: something went wrong opening the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+      print USERS ("$username\n")
+	or pr_die_unlock ("Uh oh: something went wrong printing '$username' to the user list file:</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+      close USERS
+	or pr_die_unlock ("Uh oh: something went wrong closing the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+
+
+      print_successful_registration_message ($username);
+      unlockwiki ();
+      
+    } else {
+      pr_die_unlock ($bad_username);
+    }
+  } else {
+    print $registration_form;
+  }
+}
+
+### TODO: This should be a session file
+
+if ($action eq 'users') {
+  my @users = ();
+  lockwiki ();
+  open (USERS, '<', $gitolite_user_list_file)
+    or pr_die_unlock ("Uh oh: cannot open the user list at '$gitolite_user_list_file:</p><blockquote" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administators.</p>");
+  while (defined (my $user = <USERS>)) {
+    chomp $user;
+    push (@users, $user);
+  }
+  close USERS
+    or pr_die_unlock ("Uh oh: cannot close the user list at '$gitolite_user_list_file':</p><blockquote" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+  print "<p>Below is a list of all users that have registered with us.  Follow the
+link associated with a user to see that user's repository.</p>\n";
+  if (scalar @users == 0) {
+    print "<p><em>(No users have registered yet.)</em></p>"
+  } else {
+    print "<ul>";
+    foreach my $user (@users) {
+      print "<a href=\"$lgitwebcgi?p=$git_project;r=$user.git\">$user</a>";
+    }
+  }
+  unlockwiki ();
+}
+
+  print $query->end_html;
