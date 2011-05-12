@@ -677,12 +677,23 @@ my $pre_receive_file = $MWADMIN_DIR  . '/pre-receive.in';
 
 sub print_successful_registration_message {
   my $username = shift;
+  my $public_uri = "http://$wikihost/mwiki/$username/public";
   print <<SUCCESS;
 
 <p>
 Success!  You have registered with us.  We have made a new
 repository for you whose contents reflect the current state of the
-public wiki.  You can obtain a local copy of the repository by issuing
+public wiki.  Visit</p>
+
+<blockquote>
+<a href="$public_uri"><tt>$public_uri</tt></a>
+</blockquote>
+
+<p>
+to see your new clone of the public wiki.</p>
+
+<p>
+You can obtain a local copy of your repository by issuing
 the command on your machine:</p>
 
 <blockquote>
