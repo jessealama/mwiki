@@ -651,7 +651,7 @@ my $registration_form = <<REG_FORM;
 Desired username: <input type="text" size="10" maxlength="25" name="username" />
 Desired password: <input type="text" size="10" maxlength="32" name="password" />
 <br />
-Your RSA public key: <input type="textarea" size="20" name="pubkey" />
+Your RSA public key: <input type="textarea" rows="6" cols="80" name="pubkey" />
 <input type="submit" value="Register" />
 <input type="reset" value="Reset" />
 <input type="hidden" name="p" value="$git_project">
