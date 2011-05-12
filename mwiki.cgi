@@ -662,6 +662,8 @@ Your RSA public key: <input type="textarea" rows="6" cols="80" wrap="virtual" na
 </form>
 REG_FORM
 
+my $htpasswd_file = '/var/www/.htpasswd.mwiki';
+
 my $bad_htpasswd = <<BAD_HTPASSWD;
 <p>
 The password you supplied is invalid; it must be at most 32
