@@ -690,7 +690,8 @@ public wiki.  Visit</p>
 </blockquote>
 
 <p>
-to see your new clone of the public wiki.</p>
+to see your new clone of the public wiki.  (You may want to
+consider bookmarking this URL.)</a>
 
 <p>
 You can obtain a local copy of your repository by issuing
