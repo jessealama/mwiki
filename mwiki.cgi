@@ -994,10 +994,11 @@ link associated with a user to see that user's repository.</p>\n";
   if (scalar @users == 0) {
     print "<p><em>(No users have registered yet.)</em></p>"
   } else {
-    print "<ul>";
+    print "<ul>", "\n";
     foreach my $user (@users) {
-      print "<a href=\"$lgitwebcgi?p=$git_project;r=$user.git\">$user</a>";
+      print "<li><a href=\"$lgitwebcgi?p=$git_project;r=$user.git\">$user</a></li>", "\n";
     }
+    print "</ul>", "\n";
   }
   unlockwiki ();
 }
