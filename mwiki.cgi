@@ -127,6 +127,7 @@ sub pr_print {
 
 sub pr_die
 {
+    printheader ();
     pr_print(@_);
     print $query->end_html;
     exit;
@@ -134,6 +135,7 @@ sub pr_die
 
 sub pr_die_unlock
 {
+    printheader ();
     pr_print(@_);
     print $query->end_html;
     unlockwiki();
