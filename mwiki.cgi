@@ -744,158 +744,162 @@ if($action eq "register")
 {
   if (defined ($username) && defined ($passwd) && defined ($pubkey)) {
     if ($username =~ /[a-z0-9A-Z-_]{1,25}/) {
-      lockwiki ();
-      # first, add the user to the list of all users
-      # sanity
-      unless (-r $gitolite_user_conf_file) {
-	pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unreadable.  Please complain loudly to the administrators.</p>");
-      }
-      unless (-w $gitolite_user_conf_file) {
-	pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unwritable.  Please complain loudly to the administrators.</p>");
-      }
-      open (USER_CONF_FILE, '>>', $gitolite_user_conf_file)
-	or pr_die_unlock ("<p>Uh oh: something went wrong while opening the gitolite user configuration file '$gitolite_user_conf_file' to register '$username':</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
-      print USER_CONF_FILE <<USER_CONFIG;
+      if ($passwd =~ /[a-z0-9A-Z-_]{0,32}/) {
+	lockwiki ();
+	# first, add the user to the list of all users
+	# sanity
+	unless (-r $gitolite_user_conf_file) {
+	  pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unreadable.  Please complain loudly to the administrators.</p>");
+	}
+	unless (-w $gitolite_user_conf_file) {
+	  pr_die_unlock ("<p>Uh oh: the gitolite user configuration file at '$gitolite_user_conf_file' is unwritable.  Please complain loudly to the administrators.</p>");
+	}
+	open (USER_CONF_FILE, '>>', $gitolite_user_conf_file)
+	  or pr_die_unlock ("<p>Uh oh: something went wrong while opening the gitolite user configuration file '$gitolite_user_conf_file' to register '$username':</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
+	print USER_CONF_FILE <<USER_CONFIG;
 \@users = $username
 repo $username
    R   = \@all
    RW+ = $username $MWUSER
 
 USER_CONFIG
-      close USER_CONF_FILE
+	close USER_CONF_FILE
 	or pr_die_unlock ("Something went wrong closing the output filehandle for the user configuration file!");
 
-      # copy the given public key to the keydir
-      my $user_key_file = $gitolite_key_dir . '/' . "$username" . '.pub';
-      open (USER_KEY_FILE, '>', $user_key_file) 
-	or pr_die_unlock ("<p>Uh oh: something went wrong while opening the an output filehandle at '$user_key_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
-      print USER_KEY_FILE ("$pubkey\n");
-      close (USER_KEY_FILE)
-	or pr_die_unlock ("<p>Uh oh: something went wrong when closing the output filehandle at '$user_key_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
-      chdir $gitolite_admin_dir;
-      # add the changed files (we should probably lock things here, if not earlier)
-      my $git_add_exit_code = system ('git', 'add', '.');
-      if ($git_add_exit_code != 0) {
-	my $git_add_error_message = $git_add_exit_code >> 8;
-	pr_die_unlock ("<p>Uh oh: something went wrong staging the modified files in the gitolite admin repo:</p><blockquote>" . escapeHTML ($git_add_error_message) . "</blockquote><p>Please complain loudly to the administrators.</p>");
-      }
-      # commit these changes to the gitolite admin repo
-      my $git_commit_exit_code = system ('git', 'commit', '--quiet', '-a', '-m', "Added public key '$pubkey' for user '$username'");
-      if ($git_commit_exit_code != 0) {
-	my $git_commit_error_message = $git_commit_exit_code >> 8;
-	pr_die_unlock ("<p>Uh oh: something went wrong commiting the changes to the gitolite admin repo:</p><blockqute>" . escapeHTML ($git_commit_error_message) . "</blockquote><p>Please complain loudly to the administrators.");
-      }
-      # push the changes to the real gitolite admin repo
-      my $git_push_adm_exit_code = system ('git', 'push', '--quiet');
-      if ($git_push_adm_exit_code != 0) {
-	my $git_push_adm_error_message = $git_push_adm_exit_code >> 8;
-	pr_die_unlock ("<p>Uh oh: something went wrong pushing the changes we just made to to the gitolite admin repo:</p><blockqute>" . escapeHTML ($git_push_adm_error_message) . "</blockquote><p>Please complain loudly to the administrators.");
-      }
+	# copy the given public key to the keydir
+	my $user_key_file = $gitolite_key_dir . '/' . "$username" . '.pub';
+	open (USER_KEY_FILE, '>', $user_key_file) 
+	  or pr_die_unlock ("<p>Uh oh: something went wrong while opening the an output filehandle at '$user_key_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
+	print USER_KEY_FILE ("$pubkey\n");
+	close (USER_KEY_FILE)
+	  or pr_die_unlock ("<p>Uh oh: something went wrong when closing the output filehandle at '$user_key_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+	chdir $gitolite_admin_dir;
+	# add the changed files (we should probably lock things here, if not earlier)
+	my $git_add_exit_code = system ('git', 'add', '.');
+	if ($git_add_exit_code != 0) {
+	  my $git_add_error_message = $git_add_exit_code >> 8;
+	  pr_die_unlock ("<p>Uh oh: something went wrong staging the modified files in the gitolite admin repo:</p><blockquote>" . escapeHTML ($git_add_error_message) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+	}
+	# commit these changes to the gitolite admin repo
+	my $git_commit_exit_code = system ('git', 'commit', '--quiet', '-a', '-m', "Added public key '$pubkey' for user '$username'");
+	if ($git_commit_exit_code != 0) {
+	  my $git_commit_error_message = $git_commit_exit_code >> 8;
+	  pr_die_unlock ("<p>Uh oh: something went wrong commiting the changes to the gitolite admin repo:</p><blockqute>" . escapeHTML ($git_commit_error_message) . "</blockquote><p>Please complain loudly to the administrators.");
+	}
+	# push the changes to the real gitolite admin repo
+	my $git_push_adm_exit_code = system ('git', 'push', '--quiet');
+	if ($git_push_adm_exit_code != 0) {
+	  my $git_push_adm_error_message = $git_push_adm_exit_code >> 8;
+	  pr_die_unlock ("<p>Uh oh: something went wrong pushing the changes we just made to to the gitolite admin repo:</p><blockqute>" . escapeHTML ($git_push_adm_error_message) . "</blockquote><p>Please complain loudly to the administrators.");
+	}
 
-      ### TODO: the btrfs/rsync stuff goes here
+	### TODO: the btrfs/rsync stuff goes here
 
-      # first do filesystem clone of the backend public repo 
+	# first do filesystem clone of the backend public repo 
 
-      my $user_backend_repo = "$REPOS_BASE/$username";
+	my $user_backend_repo = "$REPOS_BASE/$username";
 
-      clone_full_dirs_report($PUBLIC_REPO, $user_backend_repo);
+	clone_full_dirs_report($PUBLIC_REPO, $user_backend_repo);
 
-      # fix .git/config
+	# fix .git/config
       
-      # TODO: set other vars here like makejobs, etc
+	# TODO: set other vars here like makejobs, etc
 
-      my %mw_git_backend_vars = 
+	my %mw_git_backend_vars = 
 	  ("user.name" => $username,
 	   "user.email" => "$username\@none.none",
 	   "mwiki.wikihost" => $wikihost,
 	   "mwiki.htmldir" => "http://$wikihost/$REPO_NAME/$username");
 
-      chdir  $user_backend_repo;
-      mw_common::set_git_vars(\%mw_git_backend_vars);
+	chdir  $user_backend_repo;
+	mw_common::set_git_vars(\%mw_git_backend_vars);
 
-      # then push to the bare repo for the newly registered user
+	# then push to the bare repo for the newly registered user
 
-      my $bare_user_repo_ssh = "$MWUSER\@$wikihost:$username";
+	my $bare_user_repo_ssh = "$MWUSER\@$wikihost:$username";
 
-      my $git_push_exit_code =
+	my $git_push_exit_code =
 	  system ('git', 'push', '--all', $bare_user_repo_ssh);
-      if ($git_push_exit_code != 0) {
-	my $git_push_error_message = $git_push_exit_code >> 8;
-	pr_die_unlock ("<p>Uh oh: something went wrong while pushing the repository for '$username':$bare_user_repo_ssh</p><blockquote>" .  escapeHTML ($git_push_error_message) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
-      }
+	if ($git_push_exit_code != 0) {
+	  my $git_push_error_message = $git_push_exit_code >> 8;
+	  pr_die_unlock ("<p>Uh oh: something went wrong while pushing the repository for '$username':$bare_user_repo_ssh</p><blockquote>" .  escapeHTML ($git_push_error_message) . "</blockquote> <p>Please complain loudly to the administrators.</p>");
+	}
 
-      # this now exists
-      my $user_gitolite_bare_repo = "$BARE_REPOS/$username.git";
+	# this now exists
+	my $user_gitolite_bare_repo = "$BARE_REPOS/$username.git";
 
-      # remove the copied frontend config, set the new
-      system("git remote rm frontend");
-      system("git remote add frontend $bare_user_repo_ssh");
-
-
-
-      my %mw_git_bare_vars = 
-      ("core.sharedRepository" => "true",
-       "daemon.receivepack" => "true",
-       "mwiki.backend" => "$user_backend_repo/",
-       "mwiki.wikihost" => $wikihost,
-       "mwiki.htmldir" => "http://$wikihost/$REPO_NAME/$username");
-
-      chdir  $user_gitolite_bare_repo;
-      mw_common::set_git_vars(\%mw_git_bare_vars);
+	# remove the copied frontend config, set the new
+	system("git remote rm frontend");
+	system("git remote add frontend $bare_user_repo_ssh");
 
 
-      system("touch $user_gitolite_bare_repo/git-daemon-export-ok");
 
-      # install hooks: pre-receive, post-update
+	my %mw_git_bare_vars = 
+	  ("core.sharedRepository" => "true",
+	   "daemon.receivepack" => "true",
+	   "mwiki.backend" => "$user_backend_repo/",
+	   "mwiki.wikihost" => $wikihost,
+	   "mwiki.htmldir" => "http://$wikihost/$REPO_NAME/$username");
 
-      foreach my $hookfile ("pre-receive", "post-update")
-      {
+	chdir  $user_gitolite_bare_repo;
+	mw_common::set_git_vars(\%mw_git_bare_vars);
+
+
+	system("touch $user_gitolite_bare_repo/git-daemon-export-ok");
+
+	# install hooks: pre-receive, post-update
+
+	foreach my $hookfile ("pre-receive", "post-update") {
 	  open(H,"$MWADMIN_DIR/$hookfile.in") or pr_die_unlock ("Hook not readable: $MWADMIN_DIR/$hookfile.in");
 	  open(H1,">$user_gitolite_bare_repo/hooks/$hookfile") 
-	      or pr_die_unlock ("Hook not writable: $user_gitolite_bare_repo/hooks/$hookfile");
-	  while(<H>) { s|\@\@BACKEND\@\@|$user_backend_repo|g; s|\@\@MIRROR\@\@||g; print H1 $_; }
+	    or pr_die_unlock ("Hook not writable: $user_gitolite_bare_repo/hooks/$hookfile");
+	  while (<H>) {
+	    s|\@\@BACKEND\@\@|$user_backend_repo|g; s|\@\@MIRROR\@\@||g; print H1 $_;
+	  }
 	  close(H); close(H1);
 	  chmod 0755, "$user_gitolite_bare_repo/hooks/$hookfile";
-      }
+	}
 
-      # tell gitweb about the new repo
-      my $user_gitweb_bare_repo = $GITWEB_REPOS . "$username.git";
-      my $ln_exit_code = system('ln', '-s', $user_gitolite_bare_repo, $user_gitweb_bare_repo);
-      if ($ln_exit_code != 0) {
-	my $ln_error_message = $ln_exit_code >> 8;
-        pr_die_unlock ("Un oh: something went wrong linking '$user_gitolite_bare_repo' to '$user_gitweb_bare_repo':<blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.");
-      }
+	# tell gitweb about the new repo
+	my $user_gitweb_bare_repo = $GITWEB_REPOS . "$username.git";
+	my $ln_exit_code = system('ln', '-s', $user_gitolite_bare_repo, $user_gitweb_bare_repo);
+	if ($ln_exit_code != 0) {
+	  my $ln_error_message = $ln_exit_code >> 8;
+	  pr_die_unlock ("Un oh: something went wrong linking '$user_gitolite_bare_repo' to '$user_gitweb_bare_repo':<blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.");
+	}
 
-      # install hooks in the backend
+	# install hooks in the backend
 
-      foreach my $hookfile ("pre-commit", "post-commit")
-      {
+	foreach my $hookfile ("pre-commit", "post-commit") {
 	  copy("$MWADMIN_DIR/$hookfile", "$user_backend_repo/.git/hooks")
-	      or pr_die_unlock ("Cannot copy $hookfile to $user_backend_repo/.git/hooks");
+	    or pr_die_unlock ("Cannot copy $hookfile to $user_backend_repo/.git/hooks");
 	  chmod 0755, "$user_backend_repo/.git/hooks/$hookfile";
-      }
+	}
 
-      # create the sandbox
+	# create the sandbox
 
-      clone_full_dirs_report($user_backend_repo, $user_backend_repo . '-sandbox');
+	clone_full_dirs_report($user_backend_repo, $user_backend_repo . '-sandbox');
 
 
-      # add the username to the list of all users (this introduces
-      # some redundancy in our data, but for the sake of convenience,
-      # it's easier to manage a flat list of usernames)
-      open (USERS, '>>', $gitolite_user_list_file)
-	or pr_die_unlock ("Uh oh: something went wrong opening the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
-      print USERS ("$username\n")
-	or pr_die_unlock ("Uh oh: something went wrong printing '$username' to the user list file:</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
-      close USERS
-	or pr_die_unlock ("Uh oh: something went wrong closing the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+	# add the username to the list of all users (this introduces
+	# some redundancy in our data, but for the sake of convenience,
+	# it's easier to manage a flat list of usernames)
+	open (USERS, '>>', $gitolite_user_list_file)
+	  or pr_die_unlock ("Uh oh: something went wrong opening the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+	print USERS ("$username\n")
+	  or pr_die_unlock ("Uh oh: something went wrong printing '$username' to the user list file:</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
+	close USERS
+	  or pr_die_unlock ("Uh oh: something went wrong closing the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
 
-      printheader ();
-      print_successful_registration_message ($username);
-      unlockwiki ();
+	printheader ();
+	print_successful_registration_message ($username);
+	unlockwiki ();
       
+      } else {
+	pr_die_unlock ($bad_htpasswd);
+      }
     } else {
-      pr_die_unlock ($bad_username);
+	pr_die_unlock ($bad_username);
     }
   } else {
     printheader ();
