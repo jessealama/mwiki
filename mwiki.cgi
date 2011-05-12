@@ -648,6 +648,8 @@ END
 
 my $registration_form = <<REG_FORM;
 <form method="post" action="mwiki.cgi" enctype="multipart/form-data">
+<fieldset>
+<legend>Register to make your own branches and formal notebooks</legend>
 Desired username: <input type="text" size="10" maxlength="25" name="username" />
 Desired password: <input type="text" size="10" maxlength="32" name="password" />
 <br />
@@ -656,6 +658,7 @@ Your RSA public key: <input type="textarea" rows="6" cols="80" wrap="virtual" na
 <input type="reset" value="Reset" />
 <input type="hidden" name="p" value="$git_project">
 <input type="hidden" name="a" value="register">
+</fieldset>
 </form>
 REG_FORM
 
