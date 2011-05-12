@@ -888,7 +888,8 @@ your SSH public key, an optional password.</p>
 
 <p>
 <strong>Username</strong> The username you give will be the name under
-which all your formal mathematical work is stored.
+which all your formal mathematical work is stored.  Your username
+should be at most 25 alphanumeric characters long.</p>
 
 <p>
 
