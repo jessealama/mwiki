@@ -747,6 +747,10 @@ if($action eq "register")
   if (defined ($username) && defined ($passwd) && defined ($pubkey)) {
     if ($username =~ /[a-z0-9A-Z-_]{1,25}/) {
       if ($passwd =~ /[a-z0-9A-Z-_]{0,32}/) {
+	# try to store the password
+
+	# my $htpasswd_exit_code
+	#   = system ('htpasswd', '-b' $htpasswd_file, $username, $passwd);
 	lockwiki ();
 	# first, add the user to the list of all users
 	# sanity
