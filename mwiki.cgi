@@ -98,7 +98,7 @@ elsif  ($action =~ /^(users)$/)
 }
 elsif  ($action =~ /^(register)$/)
 {
-    $titleaction = "Register with formal mathematics wiki";
+    $titleaction = "Register with the formal mathematics wiki";
 }
 
 }
