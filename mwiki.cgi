@@ -932,8 +932,10 @@ USER_CONFIG
     print $registration_form;
     print <<REGISTRATION_FORM_TAIL;
 
+<h3>About this form</h3>
+
 <p>
-<strong>About this form</strong> By completing this form, you are
+By completing this form, you are
 requesting that we make a branch of the public wiki for you and grant
 you permission to make your own branches as well.  Supply a username and
 your SSH public key.</p>
@@ -966,16 +968,19 @@ extension <tt>.pub</tt> on the file; this indicates that you are
 dealing with your public key.  Your private key generally has the same
 file name, but lacks the extension <tt>.pub</tt>.)
 
-<p>
+<p>Notes:</p>
 
+<ul>
+
+<li>
 Do not give us your SSH private key. That information is useless for
 us for the purposes of authenticating you; we need your public key.
 Moreover, your private key should generally not be shared with anyone.
-(It <em>is</em> safe, however, to give us your public key.  To learn more about
+(To learn more about
 how the SSH key scheme works, see <a href="http://www.openssh.com/">the OpenSSH homepage</a>.)
+</li>
 
-<p>
-
+<li>
 <em>If you do not have a public key</em>, or there is no directory
 called <tt>.ssh</tt> in your home directory, or if you've misplaced
 your key, then you need to generate one.  To do this, simply invoke
@@ -990,7 +995,8 @@ at a command prompt.  You will be asked a handful of questions: where
 the key should be stored (the default ought to be fine), what
 passphrase should be associated with the key (an empty password is
 acceptable).  After running <tt>ssh-keygen</tt>, you will then have a
-public (and private) key, and can proceed.</p>
+public (and private) key, and can proceed.</li>
+</ul>
 REGISTRATION_FORM_TAIL
   }
 }
