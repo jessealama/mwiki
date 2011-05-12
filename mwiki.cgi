@@ -648,7 +648,7 @@ END
 
 my $registration_form = <<REG_FORM;
 <form method="post" action="mwiki.cgi" enctype="multipart/form-data">
-Desired username: <input type="text" size="10" name="username" />
+Desired username: <input type="text" size="10" maxlength="25" name="username" />
 Desired password: <input type="text" size="10" name="password" />
 <br />
 Your RSA public key: <input type="textarea" size="20" name="pubkey" />
