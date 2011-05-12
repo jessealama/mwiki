@@ -651,14 +651,33 @@ my $registration_form = <<REG_FORM;
 <form method="post" action="mwiki.cgi" enctype="multipart/form-data">
 <fieldset>
 <legend>Register to make your own branches and formal notebooks</legend>
-Desired username: <input type="text" size="10" maxlength="25" name="username" title="The username under which you want your work to be stored" />
+<table>
+<tr>
+<td>
+<label for="username">Desired username:</label>
+</td>
+<td>
+<input type="text" size="10" maxlength="25" name="username" title="The username under which you want your work to be stored" />
+</td>
 <!-- Desired password: <input type="text" size="10" maxlength="32" name="password" title="Password to permit you to lock some of your branches from public viewing, and to ensure that only you can update your SSH public key." type="password" /> not supported yet -->
-<br />
-Your RSA public key: <input type="textarea" rows="6" cols="80" wrap="virtual" name="pubkey" title="Your SSH public key (usually called 'id_rsa.pub' or 'id_dsa.pub' in the '.ssh' subdirectory of your home directory)" />
+</tr>
+<tr>
+<td>
+<label for="pubkey">Your RSA public key:</label>
+</td>
+<td>
+<textarea rows="6" cols="80" wrap="virtual" name="pubkey" title="Your SSH public key (usually called 'id_rsa.pub' or 'id_dsa.pub' in the '.ssh' subdirectory of your home directory)" />
+</td>
+</tr>
+<tr>
+<td colspan="2">
 <input type="submit" value="Register" />
 <input type="reset" value="Reset" />
 <input type="hidden" name="p" value="$git_project">
 <input type="hidden" name="a" value="register">
+</td>
+</tr>
+</table>
 </fieldset>
 </form>
 REG_FORM
