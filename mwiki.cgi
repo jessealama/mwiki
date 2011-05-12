@@ -876,7 +876,66 @@ USER_CONFIG
   } else {
     printheader ();
     print $registration_form;
-    print "<center><font size='+5' style='color:red;'>&iexcl;TODO!</font></center>";
+    print <<REGISTRATION_FORM_TAIL;
+
+<p>
+<strong>About this form</strong> By completing this form, you are
+requesting that we make a branch of the public wiki for you and grant
+you permission to make your own branches as well.  Supply a username,
+your SSH public key, an optional password.</p>
+
+<p>
+<strong>Username</strong> The username you give will be the name under
+which all your formal mathematical work is stored.
+
+<p>
+
+<strong>Password</strong> The password you supply, if any, will be
+used to manage who can access your branches.  If you supply no
+password here, your work will be public.  (If you don't supply a
+password now but later you realize that you would like to
+password-protect some of your, please contact the site
+administrators.)</p>
+
+<p>
+
+<strong>Public key</strong> Your SSH public key is used to ensure that
+only you are permitted to push content to your branches.  Submit your
+<em>public</em> SSH key, not your private key.  Generally, if you are
+using a UNIX-type operating system, your SSH public key will be stored
+as the file <tt>id_rsa.pub</tt> or <tt>id_dsa.pub</tt> in the
+<tt>.ssh</tt> subdirectory of your home directory, depending on what
+cryptographic scheme was used to create the key pair.  (Note the
+extension <tt>.pub</tt> on the file; this indicates that you are
+dealing with your public key.  Your private key generally has the same
+file name, but lacks the extension <tt>.pub</tt>.)
+
+<p>
+
+Do not give us your SSH private key. That information is useless for
+us for the purposes of authenticating you; we need your public key.
+Moreover, your private key should generally not be shared with anyone.
+(It <em>is</em> safe, however, to give us your public key.  To learn more about
+how the SSH key scheme works, see <a href="http://www.openssh.com/">the OpenSSH homepage</a>.)
+
+<p>
+
+<em>If you do not have a public key</em>, or there is no directory
+called <tt>.ssh</tt> in your home directory, or if you've misplaced
+your key, then you need to generate one.  To do this, simply invoke
+the command</p>
+
+<blockquote>
+<tt>ssh-keygen</tt>
+</blockquote>
+
+<p>
+at a command prompt.  You will be asked a handful of questions: where
+the key should be stored (the default ought to be fine), what
+passphrase should be associated with the key (an empty password is
+acceptable).  After running <tt>ssh-keygen</tt>, you will then have a
+public (and private) key, and can proceed.</p>
+REGISTRATION_FORM_TAIL
   }
 }
 
