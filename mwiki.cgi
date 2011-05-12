@@ -662,6 +662,13 @@ Your RSA public key: <input type="textarea" rows="6" cols="80" wrap="virtual" na
 </form>
 REG_FORM
 
+my $bad_htpasswd = <<BAD_HTPASSWD;
+<p>
+The password you supplied is invalid; it must be at most 32
+alphanumeric characters long (dash '-' and underscore '_' are
+allowed).  Please go back and try again.</p>
+BAD_HTPASSWD
+
 my $bad_username = <<BAD_USERNAME;
 <p>
 Your username, '$username', is invalid; it must be between 1 and 25 alphanumeric characters (dash '-' and underscore '_' are allowed).  Please go back and try again.</p>
