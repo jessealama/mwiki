@@ -866,7 +866,7 @@ USER_CONFIG
       close USERS
 	or pr_die_unlock ("Uh oh: something went wrong closing the user list file at '$gitolite_user_list_file':</p><blockquote>" . escapeHTML ($!) . "</blockquote><p>Please complain loudly to the administrators.</p>");
 
-
+      printheader ();
       print_successful_registration_message ($username);
       unlockwiki ();
       
