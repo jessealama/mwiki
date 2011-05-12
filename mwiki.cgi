@@ -894,7 +894,8 @@ should be at most 25 alphanumeric characters long.</p>
 <p>
 
 <strong>Password</strong> The password you supply, if any, will be
-used to manage who can access your branches.  If you supply no
+used to manage who can access your branches.  It can also be used to
+change your SSH public key, once you've registered.  If you supply no
 password here, your work will be public.  (If you don't supply a
 password now but later you realize that you would like to
 password-protect some of your, please contact the site
