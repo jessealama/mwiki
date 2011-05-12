@@ -69,7 +69,8 @@ my $message       = $query->param('Message');
 
 # registering
 my $username      = $query->param('username');
-my $passwd        = $query->param('password');
+# my $passwd        = $query->param('password');
+my $passwd        = '';
 my $pubkey        = $query->param('pubkey');
 
 # this is required to untaint backticks
@@ -651,7 +652,7 @@ my $registration_form = <<REG_FORM;
 <fieldset>
 <legend>Register to make your own branches and formal notebooks</legend>
 Desired username: <input type="text" size="10" maxlength="25" name="username" title="The username under which you want your work to be stored" />
-Desired password: <input type="text" size="10" maxlength="32" name="password" title="Password to permit you to lock some of your branches from public viewing, and to ensure that only you can update your SSH public key." type="password" />
+<!-- Desired password: <input type="text" size="10" maxlength="32" name="password" title="Password to permit you to lock some of your branches from public viewing, and to ensure that only you can update your SSH public key." type="password" /> not supported yet -->
 <br />
 Your RSA public key: <input type="textarea" rows="6" cols="80" wrap="virtual" name="pubkey" title="Your SSH public key (usually called 'id_rsa.pub' or 'id_dsa.pub' in the '.ssh' subdirectory of your home directory)" />
 <input type="submit" value="Register" />
@@ -915,15 +916,15 @@ USER_CONFIG
 <p>
 <strong>About this form</strong> By completing this form, you are
 requesting that we make a branch of the public wiki for you and grant
-you permission to make your own branches as well.  Supply a username,
-your SSH public key, an optional password.</p>
+you permission to make your own branches as well.  Supply a username and
+your SSH public key.</p>
 
 <p>
 <strong>Username</strong> The username you give will be the name under
 which all your formal mathematical work is stored.  Your username
 should be at most 25 alphanumeric characters long.</p>
 
-<p>
+<!-- <p>
 
 <strong>Password</strong> The password you supply, if any, will be
 used to manage who can access your branches.  It can also be used to
@@ -931,7 +932,7 @@ change your SSH public key, once you've registered.  If you supply no
 password here, your work will be public.  (If you don't supply a
 password now but later you realize that you would like to
 password-protect some of your, please contact the site
-administrators.)</p>
+administrators.)</p> -->
 
 <p>
 
