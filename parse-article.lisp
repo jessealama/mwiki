@@ -779,6 +779,7 @@ returning NIL."
 
 (defun parse-and-emit-mizar ()
   (let ((text (get-parameter "text")))
+    (setf (content-type* *reply*) "application/xml")
     (multiple-value-bind (newparser-ok newparser-explanation)
 	(newparser text)
       (unless newparser-ok
