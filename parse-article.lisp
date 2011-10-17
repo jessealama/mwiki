@@ -793,7 +793,9 @@ returning NIL."
     (multiple-value-bind (newparser-ok newparser-explanation)
 	(newparser text)
       (unless newparser-ok
-	(setf (return-code *reply*) +http-bad-request+))
+	(if (string= newparser-explanation *newparser-clean-exit-no-wsx-error-message*)
+	    (setf (return-code *reply*) +http-internal-server-error+)
+	    (setf (return-code *reply*) +http-bad-request+)))
       newparser-explanation)))
 
 (defun initialize-uris ()
