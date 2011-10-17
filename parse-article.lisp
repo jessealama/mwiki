@@ -179,7 +179,7 @@ returning NIL."
 			  response))
 		  finally
 		    (parse-article-reply +http-bad-request+))))
-	(parse-article-reply +http-not-found+))))
+	(parse-article-reply +http-bad-request+))))
 
 (defvar *acceptor*
   (make-instance 'hunchentoot:acceptor
