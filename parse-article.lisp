@@ -27,6 +27,15 @@
 	  (push line lines))))
     (reverse lines)))
 
+(defun file-as-string (path)
+  (let ((newline (make-string 1 :initial-element #\Newline))
+	(lines (lines-of-file path)))
+    (if lines
+	(reduce #'(lambda (s1 s2)
+		    (concatenate 'string s1 newline s2))
+		(lines-of-file path))
+	"")))
+
 (defgeneric replace-extension (path old-extension new-extension))
 
 (defmethod replace-extension ((path string) old-extension new-extension)
