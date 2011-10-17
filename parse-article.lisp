@@ -760,11 +760,12 @@ returning NIL."
 		    (values t
 			    (format nil "~{~a~%~}" (lines-of-file temp-wsx-path)))
 		    (values nil
-			    "Although newparser exited cleanly, it did not generate a .wsx file!"))
+			    *newparser-clean-exit-no-wsx-error-message*))
 		(values nil
-			(format nil "~{~a~%~}" (lines-of-file temp-err-path)))))
+			(err-file-as-xml temp-err-path))))
 	  (values nil
-		  (format nil "~{~a~%~}" (lines-of-file temp-err-path)))))))
+		  (err-file-as-xml temp-err-path))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Our supported URIs
