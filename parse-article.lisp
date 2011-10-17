@@ -685,9 +685,10 @@ returning NIL."
     (loop
        for char across str
        do
-	 (if (char= char #\")
-	     (format s "\\\"")
-	     (format s "~a" char)))))
+	 (cond ((char= char #\")
+		(format s "\\\""))
+	       (t
+		(format s "~a" char))))))
 
 (defun err-file-as-xml (err-file)
   "Render the contents of the mizar error file ERR-FILE as an XML document.  The root element of the document is <errors>; children elements are <error> elements with three attributes: line, column, and error-code."
