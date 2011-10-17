@@ -211,7 +211,9 @@ returning NIL."
 			    temp-miz-path
 			    :if-exists :error
 			    :if-does-not-exist :create)
-    (open temp-err-path :direction :probe) ;; ensure existence of .err
+    (open temp-err-path :direction :probe
+	                :if-exists :supersede
+			:if-does-not-exist :create) ;; ensure existence of .err
     (let ((accom-proc (run-program "accom"
 				   (list "-q" "-l" (namestring temp-miz-path))
 				   :search t
