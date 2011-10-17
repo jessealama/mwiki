@@ -132,7 +132,7 @@
      (setf (return-code *reply*) ,return-code)
      (setf (content-length* *reply*) 0)
      (setf (header-out "Allow") "OPTIONS, GET, HEAD")
-     (setf (content-type*) "text/plain")
+     (setf (content-type*) "application/xml")
      (send-headers)))
 
 (defun respond-to-unhandled-request ()
