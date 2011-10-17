@@ -255,6 +255,6 @@ returning NIL."
       newparser-explanation)))
 
 (defun initialize-uris ()
-  (register-regexp-dispatcher "^/parse-mizar$" #'parse-and-emit-mizar))
+  (register-regexp-dispatcher "^/$" #'parse-and-emit-mizar))
 
 ;;; parse-article.lisp ends here
